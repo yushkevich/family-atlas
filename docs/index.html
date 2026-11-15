@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow, noimageindex">
+<title>Семейный атлас · Юшкевич</title>
+<link rel="stylesheet" href="./assets/site.css">
+<script defer src="./assets/data.js"></script>
+<script defer src="./assets/site.js"></script>
+</head>
+<body data-base="./">
+<a class="skip" href="#main-content">К содержанию</a>
+<header class="masthead"><div class="shell mast-inner">
+<a class="wordmark" href="./index.html"><span class="sigil" aria-hidden="true">✦</span><span>Юшкевич<small>СЕМЕЙНЫЙ АТЛАС</small></span></a>
+<nav aria-label="Разделы сайта"><a href="./index.html#tree">Дерево</a><a href="./index.html#map">Карта</a><a href="./index.html#archive">Архив</a></nav>
+</div></header>
+<div id="main-content" tabindex="-1"><main class="shell">
+<section class="hero" aria-labelledby="hero-title">
+<div><p class="eyebrow">ЮШКЕВИЧИ И РОДСТВЕННЫЕ ВЕТВИ</p><h1 id="hero-title">Семейный<br>атлас</h1><p class="intro">От имён на дереве — к историям людей, семейным фотографиям и местам их жизни.</p><div class="hero-actions"><a class="primary" href="#tree">Открыть дерево <span aria-hidden="true">↓</span></a><a class="text-link" href="#archive">Найти человека</a></div><div class="metrics"><span><b>87</b> карточек</span><span><b>28</b> мест</span></div></div>
+<div class="hero-photo"><img src="./assets/photos/a-0172.jpg" alt="Михаил Омельяненко в морской форме"><span>Михаил Сергеевич Омельяненко<br><small>Из семейного альбома</small></span></div>
+</section>
+
+<section class="section" id="tree">
+<div class="heading"><div><p class="eyebrow">РОДСТВЕННЫЕ СВЯЗИ</p><h2>Семейное дерево</h2></div><p>Нажмите на имя, чтобы открыть профиль. Кнопки с числом раскрывают родственников рядом с человеком.</p></div>
+<div class="panel">
+<div class="toolbar"><div class="pills" id="tree-modes" aria-label="Вид дерева"><button data-mode="focus" aria-pressed="true">Ближайшие ветви</button><button data-mode="all" aria-pressed="false">Вся семья</button><button data-mode="candidates" aria-pressed="false">Кандидаты</button></div><button id="tree-reset" class="quiet">Сбросить вид</button></div>
+<div class="canvas-wrap"><svg id="graph" aria-label="Интерактивное семейное дерево"></svg><div class="zoom"><button data-tree-zoom="out" aria-label="Отдалить">−</button><button data-tree-zoom="fit" aria-label="Уместить дерево">⌖</button><button data-tree-zoom="in" aria-label="Приблизить">+</button></div></div>
+<div class="panel-foot"><span id="tree-status" aria-live="polite"></span><ul class="tree-legend" aria-label="Обозначения связей"><li><i class="legend-partners" aria-hidden="true"></i>Супруги</li><li><i class="legend-parents" aria-hidden="true"></i>Родители и дети</li><li><i class="legend-siblings" aria-hidden="true"></i>Братья и сёстры по семейным сведениям</li></ul></div>
+</div>
+</section>
+
+<section class="section" id="map">
+<div class="heading"><div><p class="eyebrow">ГЕОГРАФИЯ СЕМЬИ</p><h2>Места на карте</h2></div><p>Выберите точку, чтобы увидеть связанные с ней события и людей.</p></div>
+<div id="family-map"></div>
+</section>
+
+<section class="section" id="archive">
+<div class="heading"><div><p class="eyebrow">ИМЕНА И ИСТОРИИ</p><h2>Семейный архив</h2></div><label class="search"><span>Поиск по архиву</span><input type="search" id="archive-query" placeholder="Имя, фамилия или занятие"></label></div>
+<div class="pills archive-filters" id="archive-filters" aria-label="Ветви архива"><button aria-pressed="true" data-filter="all">Все</button><button aria-pressed="false" data-filter="paternal">По отцу</button><button aria-pressed="false" data-filter="maternal">По матери</button><button aria-pressed="false" data-filter="candidate">Кандидаты</button></div>
+<p id="archive-status" class="muted" aria-live="polite"></p><div id="archive-results" class="archive-grid"></div><button id="archive-more" class="quiet more">Показать ещё</button>
+</section>
+</main>
+</div>
+<footer class="shell site-footer"><a href="./index.html">Семейный атлас Юшкевичей</a><span>Люди, места и документы семьи</span></footer>
+<dialog id="lightbox"><form method="dialog"><button aria-label="Закрыть">×</button></form><figure id="lightbox-content"></figure></dialog>
+</body>
+</html>
