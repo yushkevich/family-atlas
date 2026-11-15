@@ -259,7 +259,16 @@
     }
     function activate(next) {
       mode=next;
-      visible=mode==='focus'?closeSet():new Set(data.nodes.filter(p=>mode==='candidates'?p.candidate:!p.candidate).map(p=>p.id));
+      if (mode==='focus') {
+        visible=closeSet();
+      } else {
+        const inView=person=>{
+          if (mode==='candidates') return person.candidate;
+          if (person.candidate) return false;
+          return mode==='all' || person.branch===mode || person.branch==='self';
+        };
+        visible=new Set(data.nodes.filter(inView).map(p=>p.id));
+      }
       render();
     }
     if (!data.nodes.some(p=>p.candidate)) modes.querySelector('[data-mode="candidates"]').hidden=true;

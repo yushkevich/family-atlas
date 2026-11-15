@@ -24,7 +24,13 @@
 <section class="section" id="tree">
 <div class="heading"><div><p class="eyebrow">РОДСТВЕННЫЕ СВЯЗИ</p><h2>Семейное дерево</h2></div><p>Нажмите на имя, чтобы открыть профиль. Кнопки с числом раскрывают родственников рядом с человеком.</p></div>
 <div class="panel">
-<div class="toolbar"><div class="pills" id="tree-modes" aria-label="Вид дерева"><button data-mode="focus" aria-pressed="true">Ближайшие ветви</button><button data-mode="all" aria-pressed="false">Вся семья</button><button data-mode="candidates" aria-pressed="false">Кандидаты</button></div><button id="tree-reset" class="quiet">Сбросить вид</button></div>
+<div class="toolbar"><div class="pills" id="tree-modes" aria-label="Вид дерева">
+<button data-mode="focus" aria-pressed="true">Ближайшие ветви</button>
+<button data-mode="all" aria-pressed="false">Вся семья</button>
+<button data-mode="maternal" aria-pressed="false">По маме</button>
+<button data-mode="paternal" aria-pressed="false">По папе</button>
+<button data-mode="candidates" aria-pressed="false">Кандидаты</button>
+</div><button id="tree-reset" class="quiet">Сбросить вид</button></div>
 <div class="canvas-wrap"><svg id="graph" aria-label="Интерактивное семейное дерево"></svg><div class="zoom"><button data-tree-zoom="out" aria-label="Отдалить">−</button><button data-tree-zoom="fit" aria-label="Уместить дерево">⌖</button><button data-tree-zoom="in" aria-label="Приблизить">+</button></div></div>
 <div class="panel-foot"><span id="tree-status" aria-live="polite"></span><ul class="tree-legend" aria-label="Обозначения связей"><li><i class="legend-partners" aria-hidden="true"></i>Супруги</li><li><i class="legend-parents" aria-hidden="true"></i>Родители и дети</li><li><i class="legend-siblings" aria-hidden="true"></i>Братья и сёстры по семейным сведениям</li></ul></div>
 </div>
