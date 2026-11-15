@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow, noimageindex">
 <title>Семейный атлас · Юшкевич</title>
-<link rel="stylesheet" href="./assets/site.css">
+<link rel="stylesheet" href="./assets/site.css?v=5cfe1dd48526">
 <script defer src="./assets/data.js"></script>
-<script defer src="./assets/site.js"></script>
+<script defer src="./assets/site.js?v=5cfe1dd48526"></script>
 </head>
 <body data-base="./">
 <a class="skip" href="#main-content">К содержанию</a>
@@ -31,7 +31,9 @@
 <button data-mode="paternal" aria-pressed="false">По папе</button>
 <button data-mode="candidates" aria-pressed="false">Кандидаты</button>
 </div><button id="tree-reset" class="quiet">Сбросить вид</button></div>
-<div class="canvas-wrap"><svg id="graph" aria-label="Интерактивное семейное дерево"></svg><div class="zoom"><button data-tree-zoom="out" aria-label="Отдалить">−</button><button data-tree-zoom="fit" aria-label="Уместить дерево">⌖</button><button data-tree-zoom="in" aria-label="Приблизить">+</button></div></div>
+<div class="tree-display toolbar" id="tree-display" aria-label="Формат дерева" hidden><div class="pills"><button data-display="list" aria-controls="tree-list" aria-pressed="true">Список</button><button data-display="graph" aria-controls="tree-canvas" aria-pressed="false">Схема</button></div></div>
+<div id="tree-list" class="tree-list" hidden></div>
+<div class="canvas-wrap" id="tree-canvas"><svg id="graph" aria-label="Интерактивное семейное дерево"></svg><div class="zoom"><button data-tree-zoom="out" aria-label="Отдалить">−</button><button data-tree-zoom="fit" aria-label="Уместить дерево">⌖</button><button data-tree-zoom="in" aria-label="Приблизить">+</button></div></div>
 <div class="panel-foot"><span id="tree-status" aria-live="polite"></span><ul class="tree-legend" aria-label="Обозначения связей"><li><i class="legend-partners" aria-hidden="true"></i>Супруги</li><li><i class="legend-parents" aria-hidden="true"></i>Родители и дети</li><li><i class="legend-siblings" aria-hidden="true"></i>Братья и сёстры по семейным сведениям</li></ul></div>
 </div>
 </section>

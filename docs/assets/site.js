@@ -66,9 +66,23 @@
 
   function viewport(svg, options = {}) {
     let view = [0,0,1,1], origin, moved = false;
+    const touches = new Map();
+    const min = options.min || 90, max = options.max || 90000;
+    const control = document.createElement('button');
+    control.type = 'button';
+    control.className = 'touch-control quiet';
+    control.textContent = options.touchLabel || 'Управлять схемой';
+    control.setAttribute('aria-pressed','false');
+    svg.after(control);
+    control.addEventListener('click',()=>{
+      const active=svg.classList.toggle('touch-active');
+      control.setAttribute('aria-pressed',String(active));
+      control.textContent=active?'Вернуть прокрутку':(options.touchLabel || 'Управлять схемой');
+    });
     function set(box) {
       view = box;
       svg.setAttribute('viewBox', box.join(' '));
+      options.onView?.(box);
     }
     function fit(box) {
       const {width,height} = svg.getBoundingClientRect();
@@ -79,7 +93,7 @@
     }
     function zoom(factor, xPct = .5, yPct = .5) {
       const [x,y,w,h] = view;
-      if (w*factor < (options.min || 90) || w*factor > (options.max || 90000)) return;
+      if (w*factor < min || w*factor > max) return;
       set([x + w*xPct*(1-factor), y + h*yPct*(1-factor),w*factor,h*factor]);
     }
     svg.addEventListener('wheel', e => {
@@ -90,10 +104,40 @@
     }, {passive:false});
     svg.addEventListener('pointerdown', e => {
       if (e.button !== 0) return;
+      if (e.pointerType==='touch') {
+        if (!svg.classList.contains('touch-active')) {moved=false;return;}
+        touches.set(e.pointerId,{x:e.clientX,y:e.clientY});
+        if (touches.size===2) {
+          origin=null;
+          moved=true;
+          for (const pointer of touches.keys()) svg.setPointerCapture(pointer);
+          return;
+        }
+        if (touches.size>2) return;
+      }
       origin = {id:e.pointerId,x:e.clientX,y:e.clientY,box:view};
       moved = false;
     });
     svg.addEventListener('pointermove', e => {
+      if (touches.has(e.pointerId)) {
+        const before=[...touches.values()];
+        touches.set(e.pointerId,{x:e.clientX,y:e.clientY});
+        if (before.length>=2) {
+          const after=[...touches.values()];
+          const gap=pair=>Math.hypot(pair[0].x-pair[1].x,pair[0].y-pair[1].y);
+          const oldGap=gap(before), newGap=gap(after);
+          if (oldGap>0 && newGap>0) {
+            const box=svg.getBoundingClientRect(), [x,y,w,h]=view;
+            const mid=(pair,axis)=>(pair[0][axis]+pair[1][axis])/2;
+            const nextWidth=Math.min(max,Math.max(min,w*oldGap/newGap));
+            const nextHeight=h*nextWidth/w;
+            set([x+w*(mid(before,'x')-box.left)/box.width-nextWidth*(mid(after,'x')-box.left)/box.width,
+                 y+h*(mid(before,'y')-box.top)/box.height-nextHeight*(mid(after,'y')-box.top)/box.height,
+                 nextWidth,nextHeight]);
+          }
+          return;
+        }
+      }
       if (origin?.id !== e.pointerId) return;
       const dx=e.clientX-origin.x, dy=e.clientY-origin.y;
       if (!moved && Math.hypot(dx,dy)<5) return;
@@ -103,7 +147,10 @@
       const ratio = w / svg.getBoundingClientRect().width;
       set([x-dx*ratio,y-dy*ratio,w,h]);
     });
-    for (const type of ['pointerup','pointercancel','lostpointercapture']) svg.addEventListener(type, () => { origin = null; });
+    for (const type of ['pointerup','pointercancel','lostpointercapture']) svg.addEventListener(type,e=>{
+      touches.delete(e.pointerId);
+      if (origin?.id===e.pointerId) origin=null;
+    });
     svg.addEventListener('click', e => { if (moved) { e.preventDefault(); e.stopImmediatePropagation(); moved = false; } }, true);
     return {fit,zoom,get:()=>view};
   }
@@ -111,6 +158,9 @@
   function setupTree() {
     const svg = $('graph'), view = viewport(svg);
     const modes = $('tree-modes');
+    const format = $('tree-display'), list = $('tree-list'), canvas = $('tree-canvas');
+    const smallScreen=matchMedia('(max-width: 640px)');
+    let display=smallScreen.matches?'list':'graph';
     const focusQuery = new URLSearchParams(location.search).get('person');
     let focus = people.has(focusQuery) ? focusQuery : data.focus;
     let mode = people.get(focus).candidate ? 'candidates' : 'focus';
@@ -233,21 +283,41 @@
       });
       return `<g class="connectors" aria-hidden="true">${markup.join('')}</g>`;
     }
+    function expansion(id) {
+      const open=expanded.has(id);
+      const count=[...neighbors.get(id)].filter(peer=>!visible.has(peer)&&!people.get(peer).candidate).length;
+      if (mode!=='focus' || (!open && !count)) return '';
+      const action=open?'Свернуть ветвь':'Раскрыть родственников';
+      return `<button type="button" class="expand" data-expand="${id}" aria-expanded="${open}" aria-label="${action}: ${esc(people.get(id).full)}${open?'':', '+count}">${open?'−':'+'+count}</button>`;
+    }
+    function renderList() {
+      const generations=groupBy(data.nodes.filter(p=>visible.has(p.id)),p=>p.generation);
+      list.innerHTML=[...generations].sort(([a],[b])=>(a??99)-(b??99)).map(([generation,row])=>{
+        const label=generation===null?'Поколение уточняется':`Поколение ${generation+1}`;
+        return `<section class="tree-list-section"><h3>${label}</h3><ul>${row.map(person=>
+          `<li data-person-row="${person.id}" class="${person.id===focus?'is-focus':''}" style="--family:${familyColor(person.id)}">${card(person,person.years)}${expansion(person.id)}</li>`).join('')}</ul></section>`;
+      }).join('');
+    }
     function render(centerOn=null) {
+      $('tree-status').textContent=`Карточек: ${visible.size} из ${data.nodes.length}`;
+      toggleButtons(modes,mode,'mode');
+      format.hidden=!smallScreen.matches;
+      toggleButtons(format,display,'display');
+      list.hidden=display!=='list';
+      canvas.hidden=display!=='graph';
+      document.querySelector('.tree-legend').hidden=display!=='graph';
+      if (display==='list') {
+        renderList();
+        return;
+      }
       layout();
       svg.innerHTML = connectors()+[...positions].map(([id,p])=>{
         const person=people.get(id);
-        const open=expanded.has(id);
-        const hidden=[...neighbors.get(id)].filter(peer=>!visible.has(peer)&&!people.get(peer).candidate).length;
-        const action=open?'Свернуть ветвь':'Раскрыть родственников';
-        const label=open?'−':'+'+hidden;
         return `<foreignObject x="${p.x-2}" y="${p.y-2}" width="221" height="109"><div xmlns="http://www.w3.org/1999/xhtml" class="tree-node ${id===focus?'is-focus':''}" style="--family:${familyColor(id)}">
           <a href="${url(person)}" class="tree-person" title="${esc(person.full)}">${image(person)}<span><strong>${esc(person.full)}</strong><small>${esc(person.years || 'Даты уточняются')}</small></span></a>
-          ${(hidden || open) && mode==='focus'?`<button class="expand" data-expand="${id}" aria-expanded="${open}" aria-label="${action}: ${esc(person.full)}${open?'':', '+hidden}">${label}</button>`:''}
+          ${expansion(id)}
         </div></foreignObject>`;
       }).join('');
-      $('tree-status').textContent=`Карточек на схеме: ${visible.size} из ${data.nodes.length}`;
-      toggleButtons(modes,mode,'mode');
       if (centerOn && positions.has(centerOn)) {
         const point=positions.get(centerOn);
         const width=svg.clientWidth<580?480:972;
@@ -273,19 +343,34 @@
     }
     if (!data.nodes.some(p=>p.candidate)) modes.querySelector('[data-mode="candidates"]').hidden=true;
     modes.addEventListener('click',e=>{const modeButton=e.target.closest('[data-mode]');if(modeButton) activate(modeButton.dataset.mode);});
-    svg.addEventListener('click', e=>{
+    function expandBranch(e) {
       const button=e.target.closest('[data-expand]');
       if (!button) return;
       const id=button.dataset.expand;
+      const rowY=display==='list'?button.getBoundingClientRect().top:null;
       if (expanded.has(id)) expanded.delete(id); else expanded.add(id);
       visible=closeSet();
       for (const branch of expanded) if (!visible.has(branch)) expanded.delete(branch);
       render(id);
-      svg.querySelector(`[data-expand="${id}"]`)?.focus({preventScroll:true});
+      const next=(display==='list'?list:svg).querySelector(`[data-expand="${id}"]`);
+      next?.focus({preventScroll:true});
+      if (rowY!==null && next) window.scrollBy(0,next.getBoundingClientRect().top-rowY);
+    }
+    svg.addEventListener('click',expandBranch);
+    list.addEventListener('click',expandBranch);
+    format.addEventListener('click',e=>{
+      const button=e.target.closest('[data-display]');
+      if (!button || display===button.dataset.display) return;
+      display=button.dataset.display;
+      render();
     });
     $('tree-reset').addEventListener('click',()=>{expanded.clear();activate(people.get(focus).candidate?'candidates':'focus');});
     document.querySelectorAll('[data-tree-zoom]').forEach(b=>b.addEventListener('click',()=>b.dataset.treeZoom==='fit'?view.fit(bounds):view.zoom(b.dataset.treeZoom==='in'?.8:1.25)));
-    window.addEventListener('resize',()=>view.fit(bounds));
+    smallScreen.addEventListener('change',()=>{display=smallScreen.matches?'list':'graph';render();});
+    let graphWidth=svg.clientWidth;
+    window.addEventListener('resize',()=>{
+      if (display==='graph' && svg.clientWidth!==graphWidth) {graphWidth=svg.clientWidth;render();}
+    });
     activate(mode);
   }
 
@@ -303,11 +388,20 @@
       ${groups.map(([k,label])=>`<button data-kind="${k}" aria-pressed="false">${label}</button>`).join('')}</div></div>
       <div class="map-layout"><div class="map-canvas"><svg class="map" aria-label="Карта семейных мест"></svg><span class="map-attribution">Подложка Natural Earth</span><div class="zoom"><button data-map-zoom="out" aria-label="Отдалить">−</button><button data-map-zoom="fit" aria-label="Уместить точки карты">⌖</button><button data-map-zoom="in" aria-label="Приблизить">+</button></div></div>
       <div class="map-results" aria-live="polite"></div></div></div>`;
-    const svg=root.querySelector('svg'), view=viewport(svg,{min:1,max:640});
+    const svg=root.querySelector('svg');
+    const land=data.land.map(p=>`<path d="${p}"/>`).join('');
+    svg.innerHTML='<g class="map-land" fill-rule="evenodd">'+land+'</g><g class="map-pins"></g>';
+    const pins=svg.querySelector('.map-pins');
+    const view=viewport(svg,{min:1,max:640,touchLabel:'Управлять картой',onView:([,,width])=>{
+      const scale=width/Math.max(svg.clientWidth,1);
+      for (const mark of pins.children) {
+        const place=data.places[mark.dataset.place];
+        mark.setAttribute('transform',`translate(${place.x} ${place.y}) scale(${scale})`);
+      }
+    }});
     const filters=root.querySelector('.map-filters'), query=root.querySelector('input'), results=root.querySelector('.map-results');
     const branches=root.querySelector('.map-branches');
     let kind='all', branch='all', selected, boxes, fitBox;
-    const land=data.land.map(p=>`<path d="${p}"/>`).join('');
     function list(filtered, refit) {
       boxes=groupBy(filtered,e=>e.place);
       if (!boxes.has(selected)) selected=boxes.keys().next().value;
@@ -325,9 +419,9 @@
       const scale=view.get()[2]/Math.max(svg.clientWidth,1);
       const markers=[...boxes].map(([key,events])=>{
         const p=data.places[key], active=key===selected;
-        return {active,markup:`<g class="pin ${active?'active':''}" transform="translate(${p.x} ${p.y}) scale(${scale})" data-place="${esc(key)}" role="button" tabindex="0" aria-label="${esc(p.label)}, событий: ${events.length}"><circle r="17" opacity="0"/><circle r="${active?7:5.5}"/>${active?`<text y="-14" text-anchor="middle">${esc(p.label)}</text>`:''}</g>`};
+        return {active,markup:`<g class="pin ${active?'active':''}" transform="translate(${p.x} ${p.y}) scale(${scale})" data-place="${esc(key)}" role="button" tabindex="0" aria-label="${esc(p.label)}, событий: ${events.length}"><circle r="22" opacity="0"/><circle r="${active?7:5.5}"/>${active?`<text y="-14" text-anchor="middle">${esc(p.label)}</text>`:''}</g>`};
       }).sort((a,b)=>Number(a.active)-Number(b.active));
-      svg.innerHTML='<g class="map-land" fill-rule="evenodd">'+land+'</g>'+markers.map(p=>p.markup).join('');
+      pins.innerHTML=markers.map(p=>p.markup).join('');
       if (!selected) {
         const emptyBranch=branch!=='all' && !mapEvents.some(e=>e.person.branch===branch);
         results.innerHTML=`<p class="muted">${emptyBranch?'Для этой ветви в данной версии нет нанесённых мест.':'Места по этому запросу не найдены.'}</p>`;
@@ -352,9 +446,11 @@
     svg.addEventListener('click',selectPin);
     svg.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){ e.preventDefault();selectPin(e);}});
     results.addEventListener('change',e=>{if(e.target.matches('select')){selected=e.target.value;draw();results.querySelector('select')?.focus();}});
-    root.querySelectorAll('[data-map-zoom]').forEach(b=>b.addEventListener('click',()=>{b.dataset.mapZoom==='fit'?view.fit(fitBox):view.zoom(b.dataset.mapZoom==='in'?.8:1.25);draw();}));
-    svg.addEventListener('wheel',e=>{if(e.ctrlKey||e.metaKey)draw();},{passive:true});
-    window.addEventListener('resize',()=>{view.fit(fitBox);draw();});
+    root.querySelectorAll('[data-map-zoom]').forEach(b=>b.addEventListener('click',()=>b.dataset.mapZoom==='fit'?view.fit(fitBox):view.zoom(b.dataset.mapZoom==='in'?.8:1.25)));
+    let mapWidth=svg.clientWidth;
+    window.addEventListener('resize',()=>{
+      if (mapWidth!==svg.clientWidth) {mapWidth=svg.clientWidth;view.fit(fitBox);}
+    });
     filter();
   }
 
